@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserById, updateUserProfile, deleteUser, getUserDivisions, setUserDivisions } from '@/lib/queries';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 
 const schema = z.object({
   name: z.string().min(1).optional(),
@@ -9,6 +10,7 @@ const schema = z.object({
   divisi: z.string().optional(),
   additional_divisi: z.array(z.string()).optional(),
   role: z.enum(['admin', 'manager', 'user']).optional(),
+  password: z.string().min(6, 'Password minimal 6 karakter').optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -36,6 +38,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (parsed.data.role) {
       const { getDb } = await import('@/lib/db');
       getDb().prepare('UPDATE users SET role = ? WHERE id = ?').run(parsed.data.role, id);
+    }
+    if (parsed.data.password) {
+      if (id === requesterId) {
+        return NextResponse.json(
+          { error: 'Ganti password akun sendiri lewat menu Profil (butuh password lama)' },
+          { status: 400 },
+        );
+      }
+      updates.password_hash = await bcrypt.hash(parsed.data.password, 10);
     }
 
     if (parsed.data.divisi !== undefined || parsed.data.additional_divisi !== undefined) {

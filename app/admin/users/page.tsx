@@ -25,6 +25,8 @@ interface EditState {
   divisi: string;
   additionalDivisi: string[];
   role: UserRole;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 interface CreateState {
@@ -79,11 +81,21 @@ export default function AdminUsersPage() {
   function openEdit(u: User) {
     const primary = u.divisions?.find(d => d.is_primary)?.name ?? u.divisi ?? '';
     const additional = (u.divisions ?? []).filter(d => !d.is_primary).map(d => d.name);
-    setEditing({ userId: u.id, name: u.name, email: u.email, divisi: primary, additionalDivisi: additional, role: u.role });
+    setEditing({ userId: u.id, name: u.name, email: u.email, divisi: primary, additionalDivisi: additional, role: u.role, newPassword: '', confirmPassword: '' });
   }
 
   async function handleSave() {
     if (!editing) return;
+    if (editing.newPassword || editing.confirmPassword) {
+      if (editing.newPassword.length < 6) {
+        setToast({ message: 'Password baru minimal 6 karakter', type: 'error' });
+        return;
+      }
+      if (editing.newPassword !== editing.confirmPassword) {
+        setToast({ message: 'Konfirmasi password tidak cocok', type: 'error' });
+        return;
+      }
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/users/${editing.userId}`, {
@@ -95,6 +107,7 @@ export default function AdminUsersPage() {
           divisi: editing.divisi,
           additional_divisi: editing.additionalDivisi,
           role: editing.role,
+          ...(editing.newPassword ? { password: editing.newPassword } : {}),
         }),
       });
       const data = await res.json();
@@ -489,6 +502,32 @@ export default function AdminUsersPage() {
                   <option value="admin">Admin</option>
                 </select>
               </Field>
+              <div className="pt-2 border-t border-[#f0f0ee]">
+                <p className="text-[10px] font-semibold text-[#5c5c5c] uppercase tracking-wide mb-2">Reset Password (opsional)</p>
+                <div className="space-y-3">
+                  <Field label="Password Baru">
+                    <input
+                      type="password"
+                      value={editing.newPassword}
+                      onChange={e => setEditing(prev => prev ? { ...prev, newPassword: e.target.value } : prev)}
+                      placeholder="Kosongkan bila tidak diubah"
+                      autoComplete="new-password"
+                      className="w-full px-3 py-2 text-sm border border-[#e8e8e8] rounded-[6px] outline-none focus:border-[var(--color-brand)] transition-colors"
+                    />
+                  </Field>
+                  <Field label="Konfirmasi Password">
+                    <input
+                      type="password"
+                      value={editing.confirmPassword}
+                      onChange={e => setEditing(prev => prev ? { ...prev, confirmPassword: e.target.value } : prev)}
+                      placeholder="Ulangi password baru"
+                      autoComplete="new-password"
+                      className="w-full px-3 py-2 text-sm border border-[#e8e8e8] rounded-[6px] outline-none focus:border-[var(--color-brand)] transition-colors"
+                    />
+                  </Field>
+                </div>
+                <p className="mt-2 text-[10px] text-[#a0a0a0]">Gunakan ini bila pengguna lupa password. Password lama tidak diperlukan.</p>
+              </div>
             </div>
             <div className="px-5 py-3 border-t border-[#e8e8e8] flex justify-end gap-2">
               <button
