@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Task, User, DashboardData, ProjectWithTasks } from '@/lib/types';
+import type { Task, User, DashboardData, ProjectWithTasks, DashboardStats, ActivityItem } from '@/lib/types';
 import { TaskCard, TaskCardSkeleton } from '@/components/TaskCard';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Toast } from '@/components/Toast';
@@ -150,6 +150,10 @@ export default function DashboardPage() {
             Tugas Baru
           </button>
         </div>
+
+        <StatsStrip stats={dashboard?.stats} loading={loading} />
+
+        <ActivityFeed items={dashboard?.activity} loading={loading} router={router} />
 
         <div className="space-y-8">
           <Section
@@ -361,5 +365,122 @@ function EmptyState({ message, action }: { message: string; action?: { label: st
         )
       )}
     </div>
+  );
+}
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  assigned: 'Tugas diberikan',
+  edited: 'Detail tugas diedit',
+  start: 'Mulai dikerjakan',
+  submit: 'Hasil diserahkan',
+  revision_request: 'Revisi diminta',
+  approved: 'Disetujui & selesai',
+  archived: 'Tugas diarsipkan',
+};
+
+const ACTIVITY_COLORS: Record<string, string> = {
+  assigned: '#4f3ff0',
+  edited: '#64748b',
+  start: '#0ea5e9',
+  submit: '#22c55e',
+  revision_request: '#ef4444',
+  approved: '#22c55e',
+  archived: '#64748b',
+};
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'baru saja';
+  if (mins < 60) return `${mins} menit lalu`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} jam lalu`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} hari lalu`;
+  return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function StatTile({ label, value, color, sub }: { label: string; value: number; color: string; sub?: string }) {
+  return (
+    <div className="bg-white border border-[#e8e8e8] rounded-[6px] px-3 py-2.5">
+      <p className="text-[10px] font-medium text-[#a0a0a0] uppercase tracking-wide truncate">{label}</p>
+      <p className="text-xl font-bold leading-tight mt-0.5" style={{ color }}>{value}</p>
+      {sub && <p className="text-[10px] text-[#a0a0a0] truncate">{sub}</p>}
+    </div>
+  );
+}
+
+function StatsStrip({ stats, loading }: { stats: DashboardStats | undefined; loading: boolean }) {
+  return (
+    <section className="mb-7">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="w-2 h-2 rounded-full" style={{ background: '#4f3ff0' }} />
+        <h2 className="text-sm font-semibold text-[#0f0f0f]">Ringkasan Kegiatan</h2>
+      </div>
+      {loading || !stats ? (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <div key={i} className="skeleton h-[62px] rounded-[6px]" />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatTile label="Dikerjakan" value={stats.aktif} color="#0ea5e9" sub="Tugas aktif saya" />
+          <StatTile label="Menunggu Review" value={stats.menunggu_review} color="#f59e0b" sub="Perlu saya review" />
+          <StatTile label="Saya Assign" value={stats.di_assign} color="#4f3ff0" sub="Belum selesai" />
+          <StatTile label="Selesai" value={stats.selesai} color="#22c55e" sub="Belum diarsip" />
+          <StatTile label="Terlambat" value={stats.overdue} color="#ef4444" sub="Lewat deadline" />
+          <StatTile label="Selesai 30 Hari" value={stats.selesai_30} color="#16a34a" sub="Terakhir 30 hari" />
+          <StatTile label="Project" value={stats.projects} color="#0d9488" sub="Project aktif" />
+          <StatTile label="Jadwal Hari Ini" value={stats.jadwal_hari_ini} color="#8b5cf6" sub="Agenda pribadi" />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ActivityFeed({ items, loading, router }: {
+  items: ActivityItem[] | undefined;
+  loading: boolean;
+  router: ReturnType<typeof useRouter>;
+}) {
+  return (
+    <section className="mb-7">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="w-2 h-2 rounded-full" style={{ background: '#0ea5e9' }} />
+        <h2 className="text-sm font-semibold text-[#0f0f0f]">Aktivitas Terbaru</h2>
+      </div>
+
+      {loading ? (
+        <div className="bg-white border border-[#e8e8e8] rounded-[6px] p-4 space-y-3">
+          {[1, 2, 3].map(i => <div key={i} className="skeleton h-4 w-3/4 rounded" />)}
+        </div>
+      ) : !items || items.length === 0 ? (
+        <div className="rounded-[6px] px-5 py-6 text-center" style={{ background: '#f5f5f4', border: '1px dashed #e8e8e8' }}>
+          <p className="text-sm text-[#a0a0a0]">Belum ada aktivitas.</p>
+        </div>
+      ) : (
+        <div className="bg-white border border-[#e8e8e8] rounded-[6px] divide-y divide-[#f0f0ee] overflow-hidden max-h-[320px] overflow-y-auto">
+          {items.map(item => (
+            <button
+              key={item.id}
+              onClick={() => router.push(`/tasks/${item.task_id}`)}
+              className="w-full flex items-start gap-3 px-4 py-2.5 text-left hover:bg-[#faf9f7] transition-colors"
+            >
+              <span
+                className="mt-1.5 w-2 h-2 rounded-full shrink-0"
+                style={{ background: ACTIVITY_COLORS[item.type] ?? '#a0a0a0' }}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-[#0f0f0f] truncate">
+                  <span className="font-semibold">{item.by_user_name}</span>
+                  <span className="text-[#5c5c5c]"> · {ACTIVITY_LABELS[item.type] ?? item.type}</span>
+                </p>
+                <p className="text-[11px] text-[#a0a0a0] truncate">{item.task_title}</p>
+              </div>
+              <span className="text-[10px] text-[#a0a0a0] shrink-0 mt-0.5">{timeAgo(item.at)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

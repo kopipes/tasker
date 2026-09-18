@@ -87,6 +87,26 @@ export interface Attachment {
   storage_path: string;
 }
 
+export interface DashboardStats {
+  aktif: number;
+  menunggu_review: number;
+  di_assign: number;
+  selesai: number;
+  overdue: number;
+  selesai_30: number;
+  projects: number;
+  jadwal_hari_ini: number;
+}
+
+export interface ActivityItem {
+  id: string;
+  type: EventType;
+  at: string;
+  task_id: string;
+  task_title: string;
+  by_user_name: string;
+}
+
 export interface DashboardData {
   sedang_dikerjakan: Task[];
   menunggu_review: Task[];
@@ -96,6 +116,9 @@ export interface DashboardData {
   semua_tugas_divisi?: Task[];
   // tasks grouped by project
   projects?: ProjectWithTasks[];
+  // personal activity summary
+  stats?: DashboardStats;
+  activity?: ActivityItem[];
 }
 
 export interface CalendarEvent {

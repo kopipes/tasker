@@ -1,6 +1,6 @@
 import { getDb } from './db';
 import { v4 as uuidv4 } from 'uuid';
-import type { User, Task, TaskEvent, Attachment, TaskStatus, DashboardData, UserRole, CalendarEvent, EventVisibility, Division, UserDivision, Project, ProjectWithTasks } from './types';
+import type { User, Task, TaskEvent, Attachment, TaskStatus, DashboardData, DashboardStats, ActivityItem, UserRole, CalendarEvent, EventVisibility, Division, UserDivision, Project, ProjectWithTasks } from './types';
 
 // ── Divisions ──────────────────────────────────────────────────────────────
 
@@ -320,7 +320,54 @@ export function getDashboard(userId: string): DashboardData {
     return a.project.name.localeCompare(b.project.name);
   });
 
-  return { ...result, projects };
+  // Personal activity stats
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString();
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
+
+  const countOne = (sql: string, ...params: unknown[]) =>
+    (db.prepare(sql).get(...params) as { c: number }).c;
+
+  const stats: DashboardStats = {
+    aktif: result.sedang_dikerjakan.length,
+    menunggu_review: result.menunggu_review.length,
+    di_assign: result.tugas_di_assign.length,
+    selesai: result.tugas_selesai.length,
+    overdue: countOne(
+      `SELECT COUNT(*) AS c FROM tasks WHERE archived_at IS NULL AND status != 'selesai'
+        AND deadline IS NOT NULL AND deadline < ? AND (assigned_to_id = ? OR assigned_by_id = ?)`,
+      nowIso, userId, userId,
+    ),
+    selesai_30: countOne(
+      `SELECT COUNT(*) AS c FROM tasks WHERE status = 'selesai' AND updated_at >= ?
+        AND (assigned_to_id = ? OR assigned_by_id = ?)`,
+      thirtyDaysAgo, userId, userId,
+    ),
+    projects: countOne(
+      `SELECT COUNT(DISTINCT project_id) AS c FROM tasks WHERE archived_at IS NULL AND project_id IS NOT NULL
+        AND (assigned_to_id = ? OR assigned_by_id = ?)`,
+      userId, userId,
+    ),
+    jadwal_hari_ini: countOne(
+      'SELECT COUNT(*) AS c FROM calendar_events WHERE user_id = ? AND start_at >= ? AND start_at <= ?',
+      userId, dayStart, dayEnd,
+    ),
+  };
+
+  const activity = (db.prepare(`
+    SELECT e.id, e.type, e.at, e.task_id, t.title AS task_title, u.name AS by_user_name
+    FROM task_events e
+    JOIN tasks t ON t.id = e.task_id
+    JOIN users u ON u.id = e.by_user_id
+    WHERE t.assigned_to_id = ? OR t.assigned_by_id = ?
+    ORDER BY e.at DESC
+    LIMIT 12
+  `).all(userId, userId) as { id: string; type: string; at: string; task_id: string; task_title: string; by_user_name: string }[])
+    .map(r => ({ ...r, type: r.type as ActivityItem['type'] }));
+
+  return { ...result, projects, stats, activity };
 }
 
 // ── Tasks ──────────────────────────────────────────────────────────────────
