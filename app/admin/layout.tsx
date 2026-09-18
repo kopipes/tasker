@@ -30,6 +30,16 @@ const menuItems = [
     ),
   },
   {
+    key: 'projects',
+    label: 'Project',
+    path: '/admin/projects',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+        <path d="M1.8 4a1.2 1.2 0 011.2-1.2h3l1.4 1.6h6A1.2 1.2 0 0114.6 5.6v6.6A1.2 1.2 0 0113.4 13.4H3a1.2 1.2 0 01-1.2-1.2V4z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" opacity=".9"/>
+      </svg>
+    ),
+  },
+  {
     key: 'divisions',
     label: 'Divisi',
     path: '/admin/divisions',

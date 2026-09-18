@@ -140,6 +140,27 @@ export function findOrCreateProject(name: string, createdById: string): Project 
   return getProjectByName(name) ?? createProject(name, createdById);
 }
 
+export function getAllProjectsWithCounts(): (Project & { task_count: number })[] {
+  return getDb().prepare(`
+    SELECT p.id, p.name, p.description, p.created_by_id, p.created_at, p.updated_at,
+      (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id) AS task_count
+    FROM projects p
+    ORDER BY p.name ASC
+  `).all() as (Project & { task_count: number })[];
+}
+
+export function countProjectTasks(projectId: string): number {
+  return (getDb().prepare('SELECT COUNT(*) AS c FROM tasks WHERE project_id = ?').get(projectId) as { c: number }).c;
+}
+
+export function deleteProject(projectId: string): void {
+  const count = countProjectTasks(projectId);
+  if (count > 0) {
+    throw new Error(`Project masih berisi ${count} tugas. Pindahkan atau hapus tugas tersebut terlebih dahulu.`);
+  }
+  getDb().prepare('DELETE FROM projects WHERE id = ?').run(projectId);
+}
+
 function attachProjects(tasks: Task[]): Task[] {
   const db = getDb();
   const cache = new Map<string, Project | null>();

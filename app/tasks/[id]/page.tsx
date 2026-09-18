@@ -59,6 +59,8 @@ export default function TaskDetailPage() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [modal, setModal] = useState<'submit' | 'revision' | 'edit' | null>(null);
   const [previewFile, setPreviewFile] = useState<Attachment | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -138,6 +140,26 @@ export default function TaskDetailPage() {
       load();
     } finally {
       setActionLoading(null);
+    }
+  }
+
+  async function handleDeleteTask() {
+    if (!task) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) {
+        setToast({ message: data.error || 'Gagal menghapus tugas', type: 'error' });
+        setConfirmDelete(false);
+        return;
+      }
+      router.replace('/dashboard');
+    } catch {
+      setToast({ message: 'Tidak dapat terhubung ke server', type: 'error' });
+      setConfirmDelete(false);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -308,6 +330,21 @@ export default function TaskDetailPage() {
               </div>
             )}
 
+            {currentUser.role === 'admin' && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-[6px] transition-colors hover:bg-red-50"
+                  style={{ border: '1px solid #fecaca', color: '#ef4444', background: 'white' }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                    <path d="M2.5 4h9M5.5 4V2.5h3V4M4 4l.6 7.5h4.8L10 4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Hapus Tugas (Admin)
+                </button>
+              </div>
+            )}
+
             {/* Timeline */}
             <CollapsibleTimeline events={events} onPreview={setPreviewFile} />
           </div>
@@ -385,6 +422,40 @@ export default function TaskDetailPage() {
       )}
       {previewFile && (
         <FilePreviewModal att={previewFile} onClose={() => setPreviewFile(null)} />
+      )}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30">
+          <div className="bg-white rounded-[8px] w-full max-w-sm shadow-xl border border-[#e8e8e8]">
+            <div className="px-5 py-4 border-b border-[#e8e8e8]">
+              <h2 className="text-sm font-semibold text-[#0f0f0f]">Hapus Tugas</h2>
+            </div>
+            <div className="px-5 py-4 space-y-2">
+              <p className="text-sm text-[#5c5c5c]">
+                Yakin ingin menghapus tugas <span className="font-semibold text-[#0f0f0f]">{task.title}</span>?
+              </p>
+              <p className="text-xs text-[#ef4444] bg-[#fef2f2] border border-[#fecaca] rounded-[6px] px-3 py-2">
+                Tugas beserta seluruh riwayat dan lampirannya akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.
+              </p>
+            </div>
+            <div className="px-5 py-3 border-t border-[#e8e8e8] flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="text-xs px-4 py-2 rounded-[6px] transition-colors hover:bg-[#f0f0ee]"
+                style={{ color: 'var(--color-ink-500)', border: '1px solid #e8e8e8' }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteTask}
+                disabled={deleting}
+                className="text-xs px-4 py-2 rounded-[6px] font-semibold text-white transition-all active:scale-95 disabled:opacity-50"
+                style={{ background: '#ef4444' }}
+              >
+                {deleting ? 'Menghapus...' : 'Hapus Permanen'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
