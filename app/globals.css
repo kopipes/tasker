@@ -1,26 +1,140 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* ── Color Tokens ── */
+  --color-ink-900: #0f0f0f;
+  --color-ink-700: #2a2a2a;
+  --color-ink-500: #5c5c5c;
+  --color-ink-300: #a0a0a0;
+  --color-ink-100: #e8e8e8;
+  --color-ink-50: #f5f5f4;
+
+  --color-paper: #faf9f7;
+  --color-paper-warm: #f2efe9;
+
+  --color-ticket: #1a1a2e;
+  --color-ticket-accent: #e8e0f0;
+
+  --color-brand: #4f3ff0;
+  --color-brand-light: #ede9fd;
+  --color-brand-dark: #3730c4;
+
+  --color-status-belum: #64748b;
+  --color-status-belum-bg: #f1f5f9;
+  --color-status-dikerjakan: #0ea5e9;
+  --color-status-dikerjakan-bg: #e0f2fe;
+  --color-status-review: #f59e0b;
+  --color-status-review-bg: #fef3c7;
+  --color-status-revisi: #ef4444;
+  --color-status-revisi-bg: #fee2e2;
+  --color-status-selesai: #22c55e;
+  --color-status-selesai-bg: #dcfce7;
+
+  --color-urgent: #ef4444;
+  --color-urgent-bg: #fef2f2;
+  --color-warning: #f97316;
+  --color-warning-bg: #fff7ed;
+
+  /* ── Typography ── */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ── Spacing ── */
+  --radius-ticket: 2px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  font-family: var(--font-sans);
+  background-color: var(--color-paper);
+  color: var(--color-ink-900);
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
 }
+
+/* Ticket perforation line */
+.ticket-perf {
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent,
+    transparent 6px,
+    var(--color-ink-100) 6px,
+    var(--color-ink-100) 10px
+  );
+  height: 1px;
+}
+
+/* Timeline connector */
+.timeline-line::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 24px;
+  bottom: -8px;
+  width: 2px;
+  background: var(--color-ink-100);
+}
+
+/* Status transition animation */
+@keyframes statusPop {
+  0% { transform: scale(0.92); opacity: 0.6; }
+  60% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.status-pop {
+  animation: statusPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.slide-up {
+  animation: slideUp 0.22s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.18s ease-out;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-ink-100) 25%, var(--color-paper-warm) 50%, var(--color-ink-100) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-pop, .slide-up, .fade-in, .skeleton {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-ink-100); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-300); }

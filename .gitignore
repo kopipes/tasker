@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local database & user data (contains real user info + password hashes)
+/data/
+/public/uploads/
+/users_export.csv
+/scripts/seed-users.ts
